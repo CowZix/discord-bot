@@ -16,6 +16,8 @@ from discord.ext import commands
 from discord.ext.commands import Context
 
 from helpers import checks
+import openai
+import json
 
 
 class General(commands.Cog, name="general"):
@@ -82,53 +84,6 @@ class General(commands.Cog, name="general"):
         await context.send(embed=embed)
 
     @commands.hybrid_command(
-        name="serverinfo",
-        description="Get some useful (or not) information about the server.",
-    )
-    @checks.not_blacklisted()
-    async def serverinfo(self, context: Context) -> None:
-        """
-        Get some useful (or not) information about the server.
-
-        :param context: The hybrid command context.
-        """
-        roles = [role.name for role in context.guild.roles]
-        if len(roles) > 50:
-            roles = roles[:50]
-            roles.append(f">>>> Displaying[50/{len(roles)}] Roles")
-        roles = ", ".join(roles)
-
-        embed = discord.Embed(
-            title="**Server Name:**",
-            description=f"{context.guild}",
-            color=0x9C84EF
-        )
-        if context.guild.icon is not None:
-            embed.set_thumbnail(
-                url=context.guild.icon.url
-            )
-        embed.add_field(
-            name="Server ID",
-            value=context.guild.id
-        )
-        embed.add_field(
-            name="Member Count",
-            value=context.guild.member_count
-        )
-        embed.add_field(
-            name="Text/Voice Channels",
-            value=f"{len(context.guild.channels)}"
-        )
-        embed.add_field(
-            name=f"Roles ({len(context.guild.roles)})",
-            value=roles
-        )
-        embed.set_footer(
-            text=f"Created at: {context.guild.created_at}"
-        )
-        await context.send(embed=embed)
-
-    @commands.hybrid_command(
         name="ping",
         description="Check if the bot is alive.",
     )
@@ -190,62 +145,42 @@ class General(commands.Cog, name="general"):
             await context.send(embed=embed)
 
     @commands.hybrid_command(
-        name="8ball",
-        description="Ask any question to the bot.",
+        name="ai",
+        description="Get a silly ai response",
     )
     @checks.not_blacklisted()
-    @app_commands.describe(question="The question you want to ask.")
-    async def eight_ball(self, context: Context, *, question: str) -> None:
+    @app_commands.describe(message="The message that should be sent to the AI")
+    async def ai(self, context: Context, message: str) -> None:
         """
-        Ask any question to the bot.
+        OpenAI API 
 
         :param context: The hybrid command context.
-        :param question: The question that should be asked by the user.
-        """
-        answers = ["It is certain.", "It is decidedly so.", "You may rely on it.", "Without a doubt.",
-                   "Yes - definitely.", "As I see, yes.", "Most likely.", "Outlook good.", "Yes.",
-                   "Signs point to yes.", "Reply hazy, try again.", "Ask again later.", "Better not tell you now.",
-                   "Cannot predict now.", "Concentrate and ask again later.", "Don't count on it.", "My reply is no.",
-                   "My sources say no.", "Outlook not so good.", "Very doubtful."]
-        embed = discord.Embed(
-            title="**My Answer:**",
-            description=f"{random.choice(answers)}",
-            color=0x9C84EF
-        )
-        embed.set_footer(
-            text=f"The question was: {question}"
-        )
-        await context.send(embed=embed)
 
-    @commands.hybrid_command(
-        name="bitcoin",
-        description="Get the current price of bitcoin.",
-    )
-    @checks.not_blacklisted()
-    async def bitcoin(self, context: Context) -> None:
         """
-        Get the current price of bitcoin.
+        content = context.message.content.split("ai", 1)[-1]
 
-        :param context: The hybrid command context.
-        """
-        # This will prevent your bot from stopping everything when doing a web request - see: https://discordpy.readthedocs.io/en/stable/faq.html#how-do-i-make-a-web-request
-        async with aiohttp.ClientSession() as session:
-            async with session.get("https://api.coindesk.com/v1/bpi/currentprice/BTC.json") as request:
-                if request.status == 200:
-                    data = await request.json(
-                        content_type="application/javascript")  # For some reason the returned content is of type JavaScript
-                    embed = discord.Embed(
-                        title="Bitcoin price",
-                        description=f"The current price is {data['bpi']['USD']['rate']} :dollar:",
-                        color=0x9C84EF
-                    )
-                else:
-                    embed = discord.Embed(
-                        title="Error!",
-                        description="There is something wrong with the API, please try again later",
-                        color=0xE02B2B
-                    )
-                await context.send(embed=embed)
+        if len(content) > len(message):
+            message = content
+
+        api_key = self.bot.config["openai"]
+        openai.api_key = f"{api_key}"
+
+        user = str(context.author).split("#")[0]
+
+        self.bot.logger.info(
+            f"Prompt: {message}")
+
+        response = openai.Completion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are whimsical and playful chatbot named SillyBot"},
+                {f"role": "user", "content": "{message}"},
+            ]
+        )
+
+        response = response.choices[0].text.strip()
+
+        await context.reply(response, mention_author=True)
 
 
 async def setup(bot):
