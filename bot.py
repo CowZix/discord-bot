@@ -5,7 +5,6 @@ Description:
 
 Version: 5.5.0
 """
-
 import asyncio
 import json
 import logging
@@ -15,12 +14,11 @@ import random
 import sys
 import openai
 
-import aiosqlite
 import discord
 from discord.ext import commands, tasks
 from discord.ext.commands import Bot, Context
-
-
+from sqlitedict import SqliteDict
+from datetime import date, time
 import exceptions
 
 if not os.path.isfile(f"{os.path.realpath(os.path.dirname(__file__))}/config.json"):
@@ -28,6 +26,8 @@ if not os.path.isfile(f"{os.path.realpath(os.path.dirname(__file__))}/config.jso
 else:
     with open(f"{os.path.realpath(os.path.dirname(__file__))}/config.json") as file:
         config = json.load(file)
+
+
 
 """	
 Setup bot intents (events restrictions)
@@ -72,8 +72,7 @@ If you want to use prefix commands, make sure to also enable the intent below in
 """
 intents.message_content = True
 
-bot = Bot(command_prefix=commands.when_mentioned_or(
-    config["prefix"]), intents=intents, help_command=None)
+bot = Bot(command_prefix=config["prefix"], intents=intents, help_command=None)
 
 # Setup both of the loggers
 class LoggingFormatter(logging.Formatter):
@@ -125,12 +124,9 @@ logger.addHandler(console_handler)
 logger.addHandler(file_handler)
 bot.logger = logger
 
-
-async def init_db():
-    async with aiosqlite.connect(f"{os.path.realpath(os.path.dirname(__file__))}/database/database.db") as db:
-        with open(f"{os.path.realpath(os.path.dirname(__file__))}/database/schema.sql") as file:
-            await db.executescript(file.read())
-        await db.commit()
+#Add default persona
+bot.token_db = SqliteDict(f"{os.path.realpath(os.path.dirname(__file__))}/data/db.sqlite", tablename = "tokens", autocommit=True)
+bot.persona_db = SqliteDict(f"{os.path.realpath(os.path.dirname(__file__))}/data/db.sqlite", tablename = "personas", autocommit=True)
 
 """
 Create a bot variable to access the config file in cogs so that you don't need to import it every time.
@@ -158,14 +154,20 @@ async def on_ready() -> None:
         await bot.tree.sync()
 
 
-@tasks.loop(minutes=1.0)
+@tasks.loop(minutes=10.0)
 async def status_task() -> None:
     """
     Setup the game status task of the bot.
     """
-    statuses = ["silly"]
+    statuses = ["silly", "goofy"]
     await bot.change_presence(activity=discord.Game(random.choice(statuses)))
-
+    
+    
+@tasks.loop(time = time(hour=0))
+async def daily_reset():
+    if(date.today() == 1):
+        bot.token_db.fromkeys(bot.token_db, 0)        
+    
 
 @bot.event
 async def on_message(message: discord.Message) -> None:
@@ -176,6 +178,10 @@ async def on_message(message: discord.Message) -> None:
     """
     if message.author == bot.user or message.author.bot:
         return
+
+    if bot.user.mentioned_in(message):
+        await AI_Handler(message)
+    
     await bot.process_commands(message)
 
 
@@ -214,18 +220,7 @@ async def on_command_error(context: Context, error) -> None:
             color=0xE02B2B
         )
         await context.send(embed=embed)
-    elif isinstance(error, exceptions.UserBlacklisted):
-        """
-        The code here will only execute if the error is an instance of 'UserBlacklisted', which can occur when using
-        the @checks.not_blacklisted() check in your command, or you can raise the error by yourself.
-        """
-        embed = discord.Embed(
-            description="You are blacklisted from using the bot!",
-            color=0xE02B2B
-        )
-        await context.send(embed=embed)
-        bot.logger.warning(
-            f"{context.author} (ID: {context.author.id}) tried to execute a command in the guild {context.guild.name} (ID: {context.guild.id}), but the user is blacklisted from using the bot.")
+    
     elif isinstance(error, exceptions.UserNotOwner):
         """
         Same as above, just for the @checks.is_owner() check.
@@ -279,6 +274,58 @@ async def load_cogs() -> None:
                     f"Failed to load extension {extension}\n{exception}")
 
 
-asyncio.run(init_db())
+async def AI_Handler(message: discord.Message):
+        user = message.author
+        prompt = message.content.replace(f"<@{str(bot.user.id)}>", bot.user.name)
+        if(int(user.id) not in bot.token_db):
+            bot.token_db[int(user.id)] = 0
+        
+        if(int(message.guild.id) not in bot.persona_db):
+            bot.persona_db[int(message.guild.id)] = ""
+        
+        user_tokens = bot.token_db[int(user.id)]
+        limit = bot.config["api-limit"]
+        if(len(prompt) > 50):
+            response = "Message too long!"
+        elif(user_tokens < limit):
+            response, tokens = await API_Handler(prompt, int(message.guild.id))
+            user_tokens += tokens
+            bot.token_db[int(user.id)] = user_tokens
+            bot.logger.info(f"{user} has {user_tokens} tokens")
+        else:
+            response = "No more tokens ;("
+        
+        embed = discord.Embed(
+            description=response,
+            color=0x9C84EF
+        )
+        embed.set_author(
+            name=f"{bot.user.name} Says:"
+        )
+        embed.set_footer(
+            text=f"Tokens ({user_tokens}/{limit})"
+        )
+        await message.channel.send(embed = embed, reference=message)
+
+async def API_Handler(message, guild):
+    api_key = bot.config["openai"]
+    openai.api_key = f"{api_key}"
+
+    systemdict = {"role": "system", "content": ""}
+    systemdict["content"] = f"You are a chatbot named {bot.user.name}. {bot.persona_db[guild]}"
+
+    messagedict = {"role": "user", "content": ""}
+    messagedict["content"] = message
+
+    completion = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[systemdict, messagedict],
+        max_tokens = 25
+    )
+
+    response = completion.choices[0].message.content.strip()
+    tokens = completion.usage.total_tokens
+    return response, tokens
+
 asyncio.run(load_cogs())
 bot.run(config["token"])

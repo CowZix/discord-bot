@@ -142,9 +142,11 @@ cython_debug/
 
 # SQLITE database
 *.db
+*.sqlite3
 
 # Log file
 discord.log
 
 # Config File
 config.json
+data/db.sqlite

@@ -10,6 +10,7 @@ import platform
 import random
 
 import aiohttp
+import asyncio
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -28,7 +29,7 @@ class General(commands.Cog, name="general"):
         name="help",
         description="List all commands the bot has loaded."
     )
-    @checks.not_blacklisted()
+    
     async def help(self, context: Context) -> None:
         prefix = self.bot.config["prefix"]
         embed = discord.Embed(
@@ -49,7 +50,7 @@ class General(commands.Cog, name="general"):
         name="botinfo",
         description="Get some useful (or not) information about the bot.",
     )
-    @checks.not_blacklisted()
+    
     async def botinfo(self, context: Context) -> None:
         """
         Get some useful (or not) information about the bot.
@@ -57,7 +58,7 @@ class General(commands.Cog, name="general"):
         :param context: The hybrid command context.
         """
         embed = discord.Embed(
-            description="Used [Krypton's](https://krypton.ninja) template",
+            description="A silly discord bot!",
             color=0x9C84EF
         )
         embed.set_author(
@@ -65,7 +66,7 @@ class General(commands.Cog, name="general"):
         )
         embed.add_field(
             name="Owner:",
-            value="Krypton#7331",
+            value="NapalmBait#2895",
             inline=True
         )
         embed.add_field(
@@ -87,7 +88,7 @@ class General(commands.Cog, name="general"):
         name="ping",
         description="Check if the bot is alive.",
     )
-    @checks.not_blacklisted()
+    
     async def ping(self, context: Context) -> None:
         """
         Check if the bot is alive.
@@ -105,7 +106,7 @@ class General(commands.Cog, name="general"):
         name="invite",
         description="Get the invite link of the bot to be able to invite it.",
     )
-    @checks.not_blacklisted()
+    
     async def invite(self, context: Context) -> None:
         """
         Get the invite link of the bot to be able to invite it.
@@ -122,66 +123,7 @@ class General(commands.Cog, name="general"):
             await context.send("I sent you a private message!")
         except discord.Forbidden:
             await context.send(embed=embed)
-
-    @commands.hybrid_command(
-        name="server",
-        description="Get the invite link of the discord server of the bot for some support.",
-    )
-    @checks.not_blacklisted()
-    async def server(self, context: Context) -> None:
-        """
-        Get the invite link of the discord server of the bot for some support.
-
-        :param context: The hybrid command context.
-        """
-        embed = discord.Embed(
-            description=f"Join the support server for the bot by clicking [here](https://discord.gg/mTBrXyWxAF).",
-            color=0xD75BF4
-        )
-        try:
-            await context.author.send(embed=embed)
-            await context.send("I sent you a private message!")
-        except discord.Forbidden:
-            await context.send(embed=embed)
-
-    @commands.hybrid_command(
-        name="ai",
-        description="Get a silly ai response",
-    )
-    @checks.not_blacklisted()
-    @app_commands.describe(message="The message that should be sent to the AI")
-    async def ai(self, context: Context, message: str) -> None:
-        """
-        OpenAI API 
-
-        :param context: The hybrid command context.
-
-        """
-        content = context.message.content.split("ai", 1)[-1]
-
-        if len(content) > len(message):
-            message = content
-
-        api_key = self.bot.config["openai"]
-        openai.api_key = f"{api_key}"
-
-        user = str(context.author).split("#")[0]
-
-        self.bot.logger.info(
-            f"Prompt: {message}")
-
-        response = openai.Completion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are whimsical and playful chatbot named SillyBot"},
-                {f"role": "user", "content": "{message}"},
-            ]
-        )
-
-        response = response.choices[0].text.strip()
-
-        await context.reply(response, mention_author=True)
-
+    
 
 async def setup(bot):
     await bot.add_cog(General(bot))
