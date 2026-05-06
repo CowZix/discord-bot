@@ -4,5 +4,5 @@ ENV UV_TOOL_BIN_DIR=/usr/local/bin
 WORKDIR /app
 COPY . /app
 RUN uv sync --locked
-ENV PYTHONPATH="${PYTHONPATH}:/app"
+ENV PYTHONPATH=/app/src
 CMD ["uv", "run", "discord_bot"]
