@@ -4,4 +4,4 @@ ENV UV_TOOL_BIN_DIR=/usr/local/bin
 WORKDIR /app
 COPY . /app
 RUN uv sync --locked
-CMD ["uv", "run", "discord-bot"]
+CMD ["uv", "run", "discord_bot"]

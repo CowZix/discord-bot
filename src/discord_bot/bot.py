@@ -99,7 +99,6 @@ class DiscordBot(commands.Bot):
             return
         await self.process_commands(message)
 
-
     async def on_command_completion(self, context: Context) -> None:
         full_command_name = context.command.qualified_name
         split = full_command_name.split(" ")
