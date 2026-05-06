@@ -5,4 +5,4 @@ WORKDIR /app
 COPY . /app
 RUN uv sync --locked
 ENV PYTHONPATH=/app/src
-CMD ["uv", "run", "discord_bot"]
+CMD ["uv", "run", "discord-bot"]
