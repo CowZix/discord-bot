@@ -4,5 +4,4 @@ ENV UV_TOOL_BIN_DIR=/usr/local/bin
 WORKDIR /app
 COPY . /app
 RUN uv sync --frozen --no-cache
-ENV PATH="/app/.venv/bin:$PATH"
 CMD ["uv", "run", "discord-bot"]
