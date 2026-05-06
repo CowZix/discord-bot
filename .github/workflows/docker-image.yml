@@ -20,8 +20,8 @@ jobs:
 
       - name: Build image
         run: |
-          docker build -t ghcr.io/${{ github.repository }}:latest .
+          docker build -t ghcr.io/ghcr.io/cowzix/discord-bot:latest .
 
       - name: Push image
         run: |
-          docker push ghcr.io/${{ github.repository }}:latest
+          docker push ghcr.io/ghcr.io/cowzix/discord-bot:latest
