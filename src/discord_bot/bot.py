@@ -10,7 +10,7 @@ from discord.ext import commands, tasks
 from discord.ext.commands import Context
 from dotenv import load_dotenv
 
-from discord_bot.database.database import DatabaseManager
+from discord_bot.database.database_manager import DatabaseManager
 
 load_dotenv()
 

@@ -15,6 +15,9 @@ dependencies = [
 requires = ["uv_build>=0.11.8,<0.12"]
 build-backend = "uv_build"
 
+[tool.uv]
+package = true
+
 [project.scripts]
 discord-bot = "discord_bot.main:main"
 
