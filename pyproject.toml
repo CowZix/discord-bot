@@ -8,6 +8,7 @@ dependencies = [
     "aiohttp>=3.13.5",
     "aiosqlite>=0.22.1",
     "discord-py>=2.7.1",
+    "google-api-python-client>=2.196.0",
     "python-dotenv>=1.2.2",
 ]
 

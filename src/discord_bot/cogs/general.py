@@ -43,15 +43,5 @@ class General(commands.Cog, name="general"):
         )
         await context.send(embed=embed)
 
-    @commands.Cog.listener(name="on_message")
-    async def on_message(self, message: discord.Message) -> None:
-        if message.author == self.bot.user or message.author.bot:
-            return
-        if bool(re.search(r"\bkazakh\w*", message.content, re.IGNORECASE)):
-            await message.reply(
-                "https://tenor.com/view/kazakstan-gif-9926781826238488769"
-            )
-
-
 async def setup(bot) -> None:
     await bot.add_cog(General(bot))
